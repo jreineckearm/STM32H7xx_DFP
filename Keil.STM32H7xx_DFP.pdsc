@@ -1640,7 +1640,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           __var TraceD2_Pin      = 0x00040005;   // PE5
           __var TraceD3_Pin      = 0x00040006;   // PE6
 
-          __var TRACE_SINK       = 0x00000004;   // Nonzero overrides __traceout; 0 uses __traceout
+          __var TRACE_SINK       = 0x00000000;   // Nonzero overrides __traceout; 0 uses __traceout
 
           // ******************************************************
           // Constants for Trace Components
@@ -1963,7 +1963,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               __var savedAP = __ap;
               __var ffcrValue = 0x00000000;
               __var etfStatus = 0x00000000;
-              __var TRACE_BUFFER_SYNCCNT = 0xA; // TODO: Good default!!
+              __var TRACE_BUFFER_SYNCCNT = 0xA;
 
               Message(0, "Begin Configure_TMC_ETF_CircularBuffer @0x%08X, AP 0x%08X", ETF_ADDRESS_0, ETF_AP_0);
               __ap = ETF_AP_0; // Set AP
@@ -2086,6 +2086,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               // Helper variables
               __var ffcrValue = 0x00000000;
               __var savedAP = __ap;
+              __var TRACE_BUFFER_SYNCCNT = 0xA;
 
               Message(0, "Begin TraceCapture_ETF_0_CircularBuffer @0x%08X, AP 0x%08X", ETF_ADDRESS_0, ETF_AP_0);
 
