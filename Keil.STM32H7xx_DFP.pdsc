@@ -1640,7 +1640,6 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           __var TraceD2_Pin      = 0x00040005;   // PE5
           __var TraceD3_Pin      = 0x00040006;   // PE6
 
-
           // ******************************************************
           // Constants for Trace Components
           // ******************************************************
@@ -2068,7 +2067,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               Message(0, "Begin TraceCapture_TPIU_0 @0x%08X, AP 0x%08X", TPIU_ADDRESS_0, TPIU_AP_0);
 
               // Ensure involved components are in a well-defined state.
-              Sequence("TraceFlush");
+              Sequence("DoTraceFlush");
 
               // Configure TPIU if needed and enable formatter
               __ap = TPIU_AP_0; // Set AP
@@ -2089,7 +2088,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               Message(0, "Begin TraceCapture_ETF_0_CircularBuffer @0x%08X, AP 0x%08X", ETF_ADDRESS_0, ETF_AP_0);
 
               // Ensure involved components are in a well-defined state.
-              Sequence("TraceFlush");
+              Sequence("DoTraceFlush");
 
               __ap = ETF_AP_0; // Set AP
               ffcrValue  = Read32(ETF_ADDRESS_0 + 0x304);
@@ -2102,6 +2101,67 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               __ap = savedAP;
 
               Message(0, "End TraceCapture_ETF_0_CircularBuffer @0x%08X, AP 0x%08X", ETF_ADDRESS_0, ETF_AP_0);
+            </block>
+          </sequence>
+
+          <sequence name="TraceBufferRead_ETF_0_CircularBuffer">
+            <block>
+              // Helper variables
+              __var savedAP       = __ap;
+              __var etfStatus     = 0x00000000;
+              __var bufferSize    = 0x00000000;
+              __var readPointer   = 0x00000000;
+              __var writePointer  = 0x00000000;
+              __var bytesToRead   = 0x00000000;
+              __var bytesStreamed = 0x00000000;
+
+              Message(0, "Begin TraceBufferRead_ETF_0_CircularBuffer @0x%08X, AP 0x%08X", ETF_ADDRESS_0, ETF_AP_0);
+
+              __ap = ETF_AP_0; // Set AP
+
+              // TMC RSZ is expressed in 32-bit words. RRP and RWP are byte offsets.
+              bufferSize   = Read32(ETF_ADDRESS_0 + 0x004) * 4;
+              etfStatus    = Read32(ETF_ADDRESS_0 + 0x00C);
+              readPointer  = Read32(ETF_ADDRESS_0 + 0x014);
+              writePointer = Read32(ETF_ADDRESS_0 + 0x018);
+            </block>
+            <control if="bufferSize != 0">
+              <control if="(etfStatus &amp; 0x00000001) != 0">
+                <block>
+                  // STS.Full distinguishes a wrapped/full buffer from an empty buffer
+                  // when the read and write pointers are equal.
+                  bytesToRead = bufferSize;
+                </block>
+              </control>
+              <control if="(etfStatus &amp; 0x00000001) == 0">
+                <control if="writePointer &gt;= readPointer">
+                  <block>
+                    bytesToRead = writePointer - readPointer;
+                  </block>
+                </control>
+                <control if="writePointer &lt; readPointer">
+                  <block>
+                    bytesToRead = (bufferSize - readPointer) + writePointer;
+                  </block>
+                </control>
+              </control>
+              <control if="bytesToRead != 0">
+                <block>
+                  // Read repeatedly from the TMC RRD register. The TMC advances RRP.
+                  BufferRead(0, 0, ETF_ADDRESS_0 + 0x010, bytesToRead, 32);
+                  bytesStreamed = BufferStreamOut(0, 0, bytesToRead, ".trace/Blinky+STM32H747I-EVAL.TB.raw", 0, 0);
+                  Message(0, "Streamed %d of %d ETF trace bytes", bytesStreamed, bytesToRead);
+                </block>
+              </control>
+              <control if="bytesToRead == 0">
+                <block>
+                  Message(1, "ETF trace buffer is empty");
+                </block>
+              </control>
+            </control>
+            <block>
+              __ap = savedAP;
+              Message(0, "End TraceBufferRead_ETF_0_CircularBuffer @0x%08X, AP 0x%08X", ETF_ADDRESS_0, ETF_AP_0);
             </block>
           </sequence>
 
@@ -2152,7 +2212,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             <control if="syncTrace != 0 || bufferTrace != 0">
               <block>
                 // Final flush which also leaves TPIU and/or ETF turned off.
-                Sequence("TraceFlush");
+                Sequence("DoTraceFlush");
               </block>
             </control>
             <block>
@@ -2189,18 +2249,18 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             </block>
           </sequence>
 
-          <sequence name="TraceFlush">
+          <sequence name="DoTraceFlush">
             <block>
               __var swoTrace    = __traceout &amp; 0x1;
               __var syncTrace   = __traceout &amp; 0x2;
               __var bufferTrace = __traceout &amp; 0x4;
 
-              Message(0, "Begin TraceFlush");
+              Message(0, "Begin DoTraceFlush");
             </block>
             <control if="syncTrace != 0">
               <block>
                 // Normally nothing to do, SWO output always on when enabled.
-                Message(0, "TraceFlush - SWO (nothing to do)");
+                Message(0, "DoTraceFlush - SWO (nothing to do)");
               </block>
             </control>
             <control if="bufferTrace != 0">
@@ -2209,8 +2269,23 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               </block>
             </control>
             <block>
-              Message(0, "End TraceFlush");
+              Message(0, "End DoTraceFlush");
             </block>
+          </sequence>
+
+          <sequence name="TraceFlush">
+            <block>
+              __var swoTrace    = __traceout &amp; 0x1;
+              __var syncTrace   = __traceout &amp; 0x2;
+              __var bufferTrace = __traceout &amp; 0x4;
+
+              Sequence("DoTraceFlush");
+            </block>
+            <control if="bufferTrace != 0">
+              <block>
+                Sequence("TraceBufferRead_ETF_0_CircularBuffer");
+              </block>
+            </control>
           </sequence>
         </sequences>
 
