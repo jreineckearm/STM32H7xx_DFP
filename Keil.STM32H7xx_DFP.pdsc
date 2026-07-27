@@ -1640,6 +1640,8 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           __var TraceD2_Pin      = 0x00040005;   // PE5
           __var TraceD3_Pin      = 0x00040006;   // PE6
 
+          __var TRACE_SINK       = 0x00000004;   // Nonzero overrides __traceout; 0 uses __traceout
+
           // ******************************************************
           // Constants for Trace Components
           // ******************************************************
@@ -1680,7 +1682,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
                                                                   // DBGMCU_CR[22] D3DBGCKEN, [21] D1DBGCKEN
             </block>
 
-            <control if="__traceout"> <!-- Enable Trace Clock and hence access to global trace components now -->
+            <control if="TRACE_SINK != 0 || __traceout != 0"> <!-- Enable Trace Clock and hence access to global trace components now -->
               <block>
                 value |= 0x00100000;                              // DBGMCU_CR[20] TRACECLKEN
               </block>
@@ -1704,8 +1706,8 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           </sequence>
           <sequence name="TraceStart">
             <block>
-              __var traceSWO    = (__traceout &amp; 0x1) != 0;    // SWO (asynchronous) Trace Selected?
-              __var traceTPIU   = (__traceout &amp; 0x2) != 0;    // TPIU (synchronous) Trace Selected?
+              __var traceSWO    = ((TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1) != 0;    // SWO (asynchronous) Trace Selected?
+              __var traceTPIU   = ((TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2) != 0;    // TPIU (synchronous) Trace Selected?
             </block>
 
             <control if="traceSWO">
@@ -1726,8 +1728,8 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           </sequence>
           <sequence name="TraceStop">
             <block>
-              __var traceSWO    = (__traceout &amp; 0x1) != 0;    // SWO enabled?
-              __var traceTPIU   = (__traceout &amp; 0x2) != 0;    // Synchronous trace port enabled?
+              __var traceSWO    = ((TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1) != 0;    // SWO enabled?
+              __var traceTPIU   = ((TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2) != 0;    // Synchronous trace port enabled?
 
               Sequence("TraceStopExt");                           // Extensions for "full" traceSetup mode
             </block>
@@ -1856,9 +1858,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
           <sequence name="Configure_Funnel_0">
             <block>
-              __var swoTrace    = __traceout &amp; 0x1;
-              __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
+              __var swoTrace    = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1;
+              __var syncTrace   = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2;
+              __var bufferTrace = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x4;
 
               // Helper variables
               __var savedAP    = __ap;
@@ -1889,9 +1891,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
           <sequence name="Configure_Funnel_1">
             <block>
-              __var swoTrace    = __traceout &amp; 0x1;
-              __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
+              __var swoTrace    = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1;
+              __var syncTrace   = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2;
+              __var bufferTrace = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x4;
 
               // Helper variables
               __var savedAP    = __ap;
@@ -2167,9 +2169,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
           <sequence name="TraceStartExt">
             <block>
-              __var swoTrace    = __traceout &amp; 0x1;
-              __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
+              __var swoTrace    = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1;
+              __var syncTrace   = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2;
+              __var bufferTrace = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x4;
 
               Message(0, "Begin TraceStart");
 
@@ -2197,9 +2199,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
           <sequence name="TraceStopExt">
             <block>
-              __var swoTrace    = __traceout &amp; 0x1;
-              __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
+              __var swoTrace    = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1;
+              __var syncTrace   = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2;
+              __var bufferTrace = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x4;
 
               Message(0, "Begin TraceStop");
             </block>
@@ -2222,9 +2224,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
           <sequence name="TraceCapture">
             <block>
-              __var swoTrace    = __traceout &amp; 0x1;
-              __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
+              __var swoTrace    = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1;
+              __var syncTrace   = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2;
+              __var bufferTrace = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x4;
 
               Message(0, "Begin TraceCapture");
             </block>
@@ -2251,9 +2253,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
           <sequence name="DoTraceFlush">
             <block>
-              __var swoTrace    = __traceout &amp; 0x1;
-              __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
+              __var swoTrace    = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1;
+              __var syncTrace   = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2;
+              __var bufferTrace = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x4;
 
               Message(0, "Begin DoTraceFlush");
             </block>
@@ -2275,9 +2277,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
           <sequence name="TraceFlush">
             <block>
-              __var swoTrace    = __traceout &amp; 0x1;
-              __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
+              __var swoTrace    = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x1;
+              __var syncTrace   = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x2;
+              __var bufferTrace = (TRACE_SINK ? TRACE_SINK : __traceout) &amp; 0x4;
 
               Sequence("DoTraceFlush");
             </block>
