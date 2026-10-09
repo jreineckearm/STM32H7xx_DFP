@@ -146,6 +146,12 @@ TraceD1_Pin  = 0x00040004;
 TraceD2_Pin  = 0x00040005;
 TraceD3_Pin  = 0x00040006;
 
-TRACE_SINK   = 0x00000000;  // Set to 4 for Trace Buffer
+// <h> SWTF Funnel Inputs
+//   <q.0> Cortex-M7 ITM Input
+//   <q.1> Cortex-M7 ETM Input
+//   <q.2> Cortex-M4 ITM Input
+//   <q.3> Cortex-M4 ETM Input
+// </h>
+FUNNEL_1_INPUT_MASK = 0xF;
 
 // <<< end of configuration section >>>
