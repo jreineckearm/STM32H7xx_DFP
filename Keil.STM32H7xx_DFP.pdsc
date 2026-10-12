@@ -1663,6 +1663,12 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           __var TPIU_0_ADDRESS      = 0xE00F5000;
           __var TPIU_0_AP           = 0x00000002;
           __var TPIU_0_PRESCALER    = 0x00000000; // Zero derives the prescaler from the trace clocks
+		  
+		  // Global Timestamp Generator
+          __var GTS_0_ADDRESS       = 0xE00E5000;
+          __var GTS_0_AP            = 0x00000002;
+          __var GTS_0_FREQUENCY     = 0x00000000; // Program information only frequency value into CNTFID0 if other than 0
+		  __var GTS_0_HDBG          = 0x00000000; // Pause counter if HDBG signal goes high (device-specific)
         </debugvars>
 
         <sequences traceSetup="full">
@@ -1707,6 +1713,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               __var swoTrace = __traceout &amp; 0x1;
               __var syncTrace = __traceout &amp; 0x2;
               __var bufferTrace = __traceout &amp; 0x4;
+			  __var enableGTS = 0;
             </block>
             <!-- CMSIS-PACK-TRACE: ADD-DEVICE-SPECIFIC-HERE BEGIN -->
             <control if="swoTrace">
@@ -1728,11 +1735,18 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             <control if="syncTrace">
               <block>
                 Sequence("DoTraceStart_Sync");
+				enableGTS = 1;
               </block>
             </control>
             <control if="bufferTrace">
               <block>
                 Sequence("DoTraceStart_Buffer");
+				enableGTS = 1;
+              </block>
+            </control>
+            <control if="enableGTS">
+              <block>
+			    Sequence("GTS_0_Configure");
               </block>
             </control>
           </sequence>
@@ -2373,6 +2387,36 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               Message(0, "End CS_TPIU_0_Flush @0x%08X, AP 0x%08X", TPIU_0_ADDRESS, TPIU_0_AP);
             </block>
           </sequence>
+
+          <sequence name="GTS_0_Configure">
+            <block>
+              // Helper variables
+              __var savedAP     = __ap;
+			  __var cntcrValue  = 1;                              // CNTCR.EN=1
+			  
+              Message(0, "Begin GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
+
+              __ap   = GTS_0_AP;
+              Write32(GTS_0_ADDRESS + 0x000, 0x0);                // Disable Timestamp Generator
+            </block>
+			<control if="GTS_0_FREQUENCY != 0">
+              <block>
+                Write32(GTS_0_ADDRESS + 0x020, GTS_0_FREQUENCY);  // Disable Timestamp Generator
+              </block>
+            </control>
+			<control if="GTS_0_HDBG != 0">
+              <block>
+                cntcrValue |= 0x2;                                // CNTCR.HDBG=1
+              </block>
+            </control>
+            <block>
+              Write32(GTS_0_ADDRESS + 0x000, cntcrValue);         // Write control bits and enable generator
+
+              __ap = savedAP;
+              Message(0, "End GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
+            </block>
+          </sequence>
+
         </sequences>
 
         <algorithm Pname="CM7" name="CMSIS/Flash/STM32H7x_2048.FLM" start="0x08000000" size="0x00200000" RAMstart="0x20000000" RAMsize="0x8000" default="1" />
