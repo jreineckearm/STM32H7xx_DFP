@@ -1713,7 +1713,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               __var swoTrace = __traceout &amp; 0x1;
               __var syncTrace = __traceout &amp; 0x2;
               __var bufferTrace = __traceout &amp; 0x4;
-			  __var enableGTS = 0;
+              __var enableGTS = 0;
             </block>
             <!-- CMSIS-PACK-TRACE: ADD-DEVICE-SPECIFIC-HERE BEGIN -->
             <control if="swoTrace">
@@ -1735,18 +1735,18 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             <control if="syncTrace">
               <block>
                 Sequence("DoTraceStart_Sync");
-				enableGTS = 1;
+                enableGTS = 1;
               </block>
             </control>
             <control if="bufferTrace">
               <block>
                 Sequence("DoTraceStart_Buffer");
-				enableGTS = 1;
+                enableGTS = 1;
               </block>
             </control>
             <control if="enableGTS">
               <block>
-			    Sequence("GTS_0_Configure");
+                Sequence("GTS_0_Configure");
               </block>
             </control>
           </sequence>
