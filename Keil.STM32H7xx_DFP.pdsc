@@ -2392,19 +2392,19 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             <block>
               // Helper variables
               __var savedAP     = __ap;
-			  __var cntcrValue  = 1;                              // CNTCR.EN=1
+              __var cntcrValue  = 1;                              // CNTCR.EN=1
 			  
               Message(0, "Begin GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
 
               __ap   = GTS_0_AP;
               Write32(GTS_0_ADDRESS + 0x000, 0x0);                // Disable Timestamp Generator
             </block>
-			<control if="GTS_0_FREQUENCY != 0">
+            <control if="GTS_0_FREQUENCY != 0">
               <block>
                 Write32(GTS_0_ADDRESS + 0x020, GTS_0_FREQUENCY);  // Disable Timestamp Generator
               </block>
             </control>
-			<control if="GTS_0_HDBG != 0">
+            <control if="GTS_0_HDBG != 0">
               <block>
                 cntcrValue |= 0x2;                                // CNTCR.HDBG=1
               </block>
