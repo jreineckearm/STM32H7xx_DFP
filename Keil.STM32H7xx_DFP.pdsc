@@ -1662,7 +1662,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           // TPIU
           __var TPIU_0_ADDRESS      = 0xE00F5000;
           __var TPIU_0_AP           = 0x00000002;
-          __var TPIU_0_PRESCALER    = 0x00000000; // Zero derives the prescaler from the trace clocks
+          __var TPIU_0_PRESCALER    = 0x00000000; // Clock divider (ACPR + 1); zero derives it from the trace clocks
 		  
 		  // Global Timestamp Generator
           __var GTS_0_ADDRESS       = 0xE00E5000;
@@ -1987,7 +1987,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               __var value      = 0x00000000;
               __var applyFunnelMask = (swoTrace != 0);     // SWTF: enable inputs for SWO trace
 
-              Message(0, "Begin ConfigureFunnel @0x%08X, AP 0x%08X", FUNNEL_0_ADDRESS, FUNNEL_0_AP);
+              Message(0, "Begin CS_FUNNEL_0_Configure @0x%08X, AP 0x%08X", FUNNEL_0_ADDRESS, FUNNEL_0_AP);
             </block>
             <control if="applyFunnelMask">
               <block>
@@ -2022,7 +2022,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               __var value      = 0x00000000;
               __var applyFunnelMask = (syncTrace != 0 || bufferTrace != 0);     // CSTF: enable inputs for synchronous or buffer trace
 
-              Message(0, "Begin ConfigureFunnel @0x%08X, AP 0x%08X", FUNNEL_1_ADDRESS, FUNNEL_1_AP);
+              Message(0, "Begin CS_FUNNEL_1_Configure @0x%08X, AP 0x%08X", FUNNEL_1_ADDRESS, FUNNEL_1_AP);
             </block>
             <control if="applyFunnelMask">
               <block>
@@ -2063,7 +2063,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               <block>
                 // Calculate SWO prescaler value based on provided trace clock frequencies.
                 prescaler = (__traceclockin / __traceclockout) - 1;
-                Message(0, "Calculated SWO prescaler value: %d", prescaler);
+                Message(0, "Calculated SWO prescaler value: %u", prescaler);
               </block>
             </control>
             <block>
@@ -2099,7 +2099,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               // Configure
               Write32(ETF_0_ADDRESS + 0x028, 0x00000002); // Set HW FIFO Mode
               Write32(ETF_0_ADDRESS + 0x034, 0x00000000); // Watermark: Set threshold vacancy to 0 to use full buffer
-              Write32(ETF_0_ADDRESS + 0x304, 0x00000003); // FFCR: Enable Formatter and Trigger Insertion
+              ffcrValue = Read32(ETF_0_ADDRESS + 0x304);
+              ffcrValue |= 0x00000003;                 // FFCR: Enable Formatter and Trigger Insertion
+              Write32(ETF_0_ADDRESS + 0x304, ffcrValue);
               Write32(ETF_0_ADDRESS + 0x308, 0x00000000); // Clear PSCR, use other components for periodic sync requests
 
               Write32(ETF_0_ADDRESS + 0x020, 0x00000001); // Enable ETF
@@ -2132,7 +2134,9 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               // Configure
               Write32(ETF_0_ADDRESS + 0x028, 0x00000000);  // Set Circular Buffer mode
               Write32(ETF_0_ADDRESS + 0x034, 0x00000000);  // Watermark: Set threshold vacancy to 0 to use full buffer
-              Write32(ETF_0_ADDRESS + 0x304, 0x00000003);  // FFCR: Enable Formatter and Trigger Insertion
+              ffcrValue = Read32(ETF_0_ADDRESS + 0x304);
+              ffcrValue |= 0x00000003;                  // FFCR: Enable Formatter and Trigger Insertion
+              Write32(ETF_0_ADDRESS + 0x304, ffcrValue);
               Write32(ETF_0_ADDRESS + 0x308, ETF_0_PSCR_CircularBuffer); // Set PSCR
               Write32(ETF_0_ADDRESS + 0x018, 0x00000000);  // Init RwP
               Write32(ETF_0_ADDRESS + 0x014, 0x00000000);  // Init RRP
@@ -2154,7 +2158,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
 
               __ap = ETF_0_AP; // Set AP
               ffcrValue  = Read32(ETF_0_ADDRESS + 0x304);
-              ffcrValue |= 0x00000002;               // FFCR: Enable Formatter
+              ffcrValue |= 0x00000003;               // FFCR: Enable Formatter and Trigger Insertion
               Write32(ETF_0_ADDRESS + 0x304, ffcrValue);
               Write32(ETF_0_ADDRESS + 0x308, ETF_0_PSCR_CircularBuffer); // Set PSCR
               Write32(ETF_0_ADDRESS + 0x018, 0x00000000);  // Init RwP
@@ -2267,7 +2271,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
                   // named buffers specified in PDSC. Decide which xxx_Read_Buffer sequence to call based
                   // on TraceBufferSelected().
                   bytesStreamed = BufferStreamOut(0, 0, bytesToRead, "", 1, 0);
-                  Message(0, "Streamed %d of %d ETF trace bytes", bytesStreamed, bytesToRead);
+                  Message(0, "Streamed %llu of %llu ETF trace bytes", bytesStreamed, bytesToRead);
                 </block>
               </control>
               <control if="bytesToRead == 0">
@@ -2287,10 +2291,8 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             <block>
               __var swoTrace    = __traceout &amp; 0x1;
               __var syncTrace   = __traceout &amp; 0x2;
-              __var bufferTrace = __traceout &amp; 0x4;
               __var tracePortWidth = (__traceout &gt;&gt; 16) &amp; 0x3F; // Parallel trace port size
-              __var clockRatio  = __traceclockout / __traceclockin &gt;= 1 ? (__traceclockout / __traceclockin) : 1;
-              __var prescaler   = TPIU_0_PRESCALER &gt; 0 ? TPIU_0_PRESCALER : clockRatio - 1;
+              __var prescaler   = TPIU_0_PRESCALER;
 
               // Helper variables
               __var ffcrValue = 0x00000000;
@@ -2298,24 +2300,46 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               __var savedAP = __ap;
 
               Message(0, "Begin CS_TPIU_0_Configure @0x%08X, AP 0x%08X", TPIU_0_ADDRESS, TPIU_0_AP);
-
+            </block>
+            <control if="prescaler == 0">
+              <block>
+                prescaler = 1; // A missing output clock selects no prescaling.
+              </block>
+              <control if="__traceclockout != 0 &amp;&amp; (swoTrace != 0 || syncTrace != 0)">
+                <block>
+                  prescaler = __traceclockin / __traceclockout;
+                </block>
+                <control if="syncTrace != 0">
+                  <block>
+                    // Parallel TRACECLK runs at half the symbol rate.
+                    prescaler = prescaler / 2;
+                  </block>
+                </control>
+                <control if="prescaler == 0">
+                  <block>
+                    Message(2, "Error: TPIU trace clocks cannot produce a valid divisor (input %llu Hz, output %llu Hz)", __traceclockin, __traceclockout);
+                  </block>
+                </control>
+              </control>
+            </control>
+            <block>
               __ap = TPIU_0_AP; // Set AP
             </block>
             <control if="swoTrace != 0">
               <block>
-                Write32(TPIU_0_ADDRESS + 0xFB0, LAR_KEY);     // TODO: Double-check if still necessary
-                Write32(TPIU_0_ADDRESS + 0x010, prescaler);   // TPIU Asynchronous Clock Prescaler Register: No prescaling
+                Write32(TPIU_0_ADDRESS + 0xFB0, LAR_KEY);     // TPIU Lock Access Register: Unlock TPIU
+                Write32(TPIU_0_ADDRESS + 0x010, prescaler - 1); // Program asynchronous clock prescaler.
                 Write32(TPIU_0_ADDRESS + 0x0F0, 0x00000002);  // TPIU Selected Pin Protocol Register: Select SWO
               </block>
             </control>
             <control if="syncTrace != 0">
               <block>
-                Write32(TPIU_0_ADDRESS + 0xFB0, LAR_KEY);       // TODO: Double-check if still necessary
-                Write32(TPIU_0_ADDRESS + 0x010, 2*prescaler);   // TPIU Asynchronous Clock Prescaler Register: No prescaling
+                Write32(TPIU_0_ADDRESS + 0xFB0, LAR_KEY);       // TPIU Lock Access Register: Unlock TPIU
+                Write32(TPIU_0_ADDRESS + 0x010, prescaler - 1); // Program asynchronous clock prescaler.
                 Write32(TPIU_0_ADDRESS + 0x004, 1 &lt;&lt; (tracePortWidth - 1));  // TPIU Current Synchronous Port Width
                 Write32(TPIU_0_ADDRESS + 0x0F0, 0x00000000);    // TPIU Selected Pin Protocol Register: Select Sync Trace Port
                 ffcrValue  = Read32(TPIU_0_ADDRESS + 0x304);
-                ffcrValue |= 0x00000002;                      // Enable formatter
+                ffcrValue |= 0x00000002;                      // Enable continuous formatting
                 Write32(TPIU_0_ADDRESS + 0x304, ffcrValue);     // TPIU FFCR
               </block>
             </control>
@@ -2327,7 +2351,6 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
           <sequence name="CS_TPIU_0_Capture">
             <block>
               // Helper variables
-              __var LAR_KEY   = 0xC5ACCE55;
               __var savedAP = __ap;
               __var ffcrValue = 0x00000000;
 
@@ -2336,7 +2359,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               // Configure TPIU if needed and enable formatter
               __ap = TPIU_0_AP; // Set AP
               ffcrValue  = Read32(TPIU_0_ADDRESS + 0x304);
-              ffcrValue |= 0x00000002;                                // Enable formatter
+              ffcrValue |= 0x00000002;                                // Enable continuous formatting
               Write32(TPIU_0_ADDRESS + 0x304, ffcrValue);                  // TPIU FFCR
               __ap = savedAP;
               Message(0, "End CS_TPIU_0_Capture @0x%08X, AP 0x%08X", TPIU_0_ADDRESS, TPIU_0_AP);
@@ -2357,7 +2380,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               // Configure "local" TPIU for Sync Trace
               ffsrValue = Read32(TPIU_0_ADDRESS + 0x300);
             </block>
-            <control if="ffsrValue &amp; 0x2 == 0" info="Formatter not stopped, do it now">
+            <control if="(ffsrValue &amp; 0x2) == 0" info="Formatter not stopped, do it now">
               <block>
                 // Flush the TPIU formatter so pending packets leave the trace port.
                 ffcrValue = Read32(TPIU_0_ADDRESS + 0x304);
@@ -2399,11 +2422,11 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               Message(0, "Begin CS_GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
 
               __ap   = GTS_0_AP;
-              Write32(GTS_0_ADDRESS + 0x000, 0x0);                // Disable Timestamp Generator
+              Write32(GTS_0_ADDRESS + 0x000, 0x0);                // Disable timestamp generator
             </block>
             <control if="GTS_0_FREQUENCY != 0">
               <block>
-                Write32(GTS_0_ADDRESS + 0x020, GTS_0_FREQUENCY);  // Disable Timestamp Generator
+                Write32(GTS_0_ADDRESS + 0x020, GTS_0_FREQUENCY);  // CNTFID0: Informational counter frequency
               </block>
             </control>
             <control if="GTS_0_HDBG != 0">
