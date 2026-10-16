@@ -1746,7 +1746,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             </control>
             <control if="enableGTS">
               <block>
-                Sequence("GTS_0_Configure");
+                Sequence("CS_GTS_0_Configure");
               </block>
             </control>
           </sequence>
@@ -2390,13 +2390,13 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
             </block>
           </sequence>
 
-          <sequence name="GTS_0_Configure">
+          <sequence name="CS_GTS_0_Configure">
             <block>
               // Helper variables
               __var savedAP     = __ap;
               __var cntcrValue  = 1;                              // CNTCR.EN=1
 			  
-              Message(0, "Begin GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
+              Message(0, "Begin CS_GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
 
               __ap   = GTS_0_AP;
               Write32(GTS_0_ADDRESS + 0x000, 0x0);                // Disable Timestamp Generator
@@ -2415,7 +2415,7 @@ High-performance STM32H7 MCUs with Arm Cortex-M7 and Arm Cortex-M4 cores, MPU, L
               Write32(GTS_0_ADDRESS + 0x000, cntcrValue);         // Write control bits and enable generator
 
               __ap = savedAP;
-              Message(0, "End GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
+              Message(0, "End CS_GTS_0_Configure @0x%08X, AP 0x%08X", GTS_0_ADDRESS, GTS_0_AP);
             </block>
           </sequence>
 
