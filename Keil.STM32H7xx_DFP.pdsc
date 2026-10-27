@@ -14,7 +14,7 @@
   </licenseSets>
 
   <releases>
-    <release version="4.1.4-dev">
+    <release version="4.1.4-traceproto">
       Trace for pyOCD prototyping.
       Active development ...
       Package Description:
